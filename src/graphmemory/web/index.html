@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GraphMemory 管理台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    <span class="brand-name">GraphMemory</span>
+    <span class="brand-sub">记忆库管理台</span>
+  </div>
+  <div class="topbar-right">
+    <span id="live-status" class="status-pill">连接中…</span>
+    <div class="export-group">
+      <button class="btn btn-primary" onclick="exportData('json')">导出 JSON</button>
+      <button class="btn" onclick="exportData('markdown')">导出 Markdown</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <button class="nav-item active" data-tab="overview">总览</button>
+    <button class="nav-item" data-tab="memory">记忆</button>
+    <button class="nav-item" data-tab="chat">对话</button>
+    <button class="nav-item" data-tab="skills">技能</button>
+    <button class="nav-item" data-tab="agents">Agents</button>
+  </nav>
+
+  <main class="content">
+    <!-- 总览 -->
+    <section id="tab-overview" class="tab active">
+      <h1>总览</h1>
+      <div class="cards" id="component-cards"></div>
+      <h2>记忆统计</h2>
+      <div class="cards" id="stat-cards"></div>
+      <div class="actions-row">
+        <button class="btn" onclick="runPolicyMaintenance()">执行 Policy 维护（遗忘/去重）</button>
+        <button class="btn" onclick="runSkillMaintenance()">执行技能维护（低成功率降级）</button>
+        <span id="maintenance-result" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- 记忆 -->
+    <section id="tab-memory" class="tab">
+      <h1>记忆</h1>
+      <div class="panel">
+        <h2>写入记忆</h2>
+        <div class="form-grid">
+          <textarea id="add-content" placeholder="内容，如：我叫张三，今年25岁，在腾讯担任产品总监。我喜欢吃火锅。" rows="3"></textarea>
+          <div class="form-row">
+            <input id="add-user" placeholder="user_id（如：我）">
+            <input id="add-agent" placeholder="agent_id（可选，房间）">
+            <input id="add-model" placeholder="model（可选，如 glm-4-plus）">
+            <button class="btn btn-primary" onclick="addMemory()">写入</button>
+          </div>
+          <div id="add-result" class="muted"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>搜索（时间切片）</h2>
+        <div class="form-row">
+          <input id="search-q" placeholder="查询，如：张三">
+          <input id="search-user" placeholder="user_id（可选）">
+          <input id="search-k" placeholder="top_k=10" type="number" value="10" min="1" max="100">
+          <button class="btn btn-primary" onclick="searchMemory()">搜索</button>
+        </div>
+        <div id="search-result" class="table-wrap"></div>
+      </div>
+
+      <div class="panel">
+        <h2>时间线</h2>
+        <div class="form-row">
+          <input id="tl-entity" placeholder="实体名，如：张三">
+          <input id="tl-user" placeholder="user_id（可选）">
+          <button class="btn btn-primary" onclick="timeline()">查询时间线</button>
+        </div>
+        <div id="tl-result" class="table-wrap"></div>
+      </div>
+
+      <div class="panel">
+        <h2>事实库（fact_state 视图）</h2>
+        <div class="form-row">
+          <input id="facts-user" placeholder="按 user_id 过滤（可选）">
+          <button class="btn btn-primary" onclick="loadFacts()">刷新</button>
+          <span id="facts-count" class="muted"></span>
+        </div>
+        <div id="facts-result" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- 对话 -->
+    <section id="tab-chat" class="tab">
+      <h1>对话</h1>
+      <div class="panel chat-panel">
+        <div class="form-row">
+          <input id="chat-user" placeholder="user_id（可选）">
+        </div>
+        <div id="chat-log"></div>
+        <div class="form-row chat-input-row">
+          <input id="chat-input" placeholder="说点什么…（试试：我叫什么名字？）" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-primary" onclick="sendChat()">发送</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 技能 -->
+    <section id="tab-skills" class="tab">
+      <h1>技能</h1>
+      <div class="panel">
+        <h2>技能列表</h2>
+        <button class="btn" onclick="loadSkills()">刷新</button>
+        <div id="skills-result" class="table-wrap"></div>
+      </div>
+      <div class="panel">
+        <h2>交互轨迹（可压缩为技能）</h2>
+        <button class="btn" onclick="loadTraces()">刷新</button>
+        <div id="traces-result" class="table-wrap"></div>
+      </div>
+      <div class="panel">
+        <h2>录入一条轨迹（供压缩演示）</h2>
+        <div class="form-grid">
+          <input id="trace-task" placeholder="task_type，如 deploy">
+          <textarea id="trace-steps" placeholder="步骤 JSON，如 [{\"action\":\"docker build\",\"input_data\":{\"tag\":\"v1\"},\"success\":true},{\"action\":\"docker push\",\"success\":true}]" rows="3"></textarea>
+          <button class="btn btn-primary" onclick="recordTrace()">录入轨迹</button>
+          <div id="trace-result" class="muted"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Agents -->
+    <section id="tab-agents" class="tab">
+      <h1>Agents（房间 + 会话箱子）</h1>
+      <div class="panel">
+        <h2>注册 agent</h2>
+        <div class="form-row">
+          <input id="ag-id" placeholder="agent_id，如 a1">
+          <input id="ag-name" placeholder="名称，如 助手">
+          <input id="ag-desc" placeholder="描述（可选）">
+          <button class="btn btn-primary" onclick="registerAgent()">注册</button>
+        </div>
+        <div id="ag-result" class="muted"></div>
+      </div>
+      <div class="panel">
+        <h2>Agents 列表</h2>
+        <button class="btn" onclick="loadAgents()">刷新</button>
+        <div id="agents-result"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

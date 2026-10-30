@@ -1,0 +1,70 @@
+services:
+  # ===== 图数据库 — Neo4j =====
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: graphmemory-neo4j
+    ports:
+      - "127.0.0.1:7474:7474"   # Web UI
+      - "127.0.0.1:7687:7687"   # Bolt 协议
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-graphmemory_dev}
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1g
+      - NEO4J_server_memory_pagecache_size=512m
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - graphmemory
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== 关系数据库 — PostgreSQL + pgvector =====
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: graphmemory-postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=graphmemory
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-graphmemory_dev}
+      - POSTGRES_DB=graphmemory
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - graphmemory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graphmemory"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ===== 缓存 — Redis =====
+  redis:
+    image: redis:7-alpine
+    container_name: graphmemory-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-graphmemory_dev}
+    volumes:
+      - redis_data:/data
+    networks:
+      - graphmemory
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-graphmemory_dev} ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  postgres_data:
+  redis_data:
+
+networks:
+  graphmemory:
+    driver: bridge
