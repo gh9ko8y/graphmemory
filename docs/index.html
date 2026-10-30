@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GraphMemory — 会忘、会变、会随时间褪色的 AI 记忆库</title>
+<style>
+  :root{
+    --bg:#080a0f;
+    --bg2:#0b0e15;
+    --panel:rgba(255,255,255,.035);
+    --line:rgba(255,255,255,.08);
+    --text:#e8eaf0;
+    --muted:#8b93a7;
+    --dim:#5b6274;
+    --teal:#3ddc97;
+    --teal2:#1fb27a;
+    --violet:#8b7cff;
+    --amber:#ffb454;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Inter","PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.65;
+    overflow-x:hidden;
+  }
+  .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(61,220,151,.13), transparent 60%),
+      radial-gradient(800px 480px at 92% 6%, rgba(139,124,255,.12), transparent 62%),
+      radial-gradient(700px 520px at 50% 108%, rgba(61,220,151,.05), transparent 60%);
+  }
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 40px}
+  section{position:relative;z-index:1}
+
+  /* ── nav ── */
+  nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+      max-width:1180px;margin:0 auto;padding:26px 40px 0}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:650;letter-spacing:.2px}
+  .logo{width:30px;height:30px;border-radius:9px;position:relative;
+    background:linear-gradient(140deg,rgba(61,220,151,.9),rgba(31,178,122,.35));
+    box-shadow:0 0 22px rgba(61,220,151,.35);}
+  .logo:after{content:"";position:absolute;inset:8px;border-radius:5px;
+    background:var(--bg);opacity:.82}
+  .logo:before{content:"";position:absolute;inset:12px;border-radius:2px;background:var(--teal);
+    box-shadow:0 0 12px var(--teal)}
+  .nav-links{display:flex;gap:26px;font-size:13.5px;color:var(--muted)}
+  .nav-links a{color:inherit;text-decoration:none;transition:color .2s}
+  .nav-links a:hover{color:var(--text)}
+  .nav-cta{border:1px solid rgba(61,220,151,.35);color:var(--teal);padding:7px 15px;border-radius:8px;
+    font-size:13px;text-decoration:none;background:rgba(61,220,151,.06)}
+
+  /* ── hero ── */
+  .hero{display:grid;grid-template-columns:1.06fr .94fr;gap:58px;align-items:center;
+        padding:76px 0 58px}
+  .tag{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--teal);
+    border:1px solid rgba(61,220,151,.26);background:rgba(61,220,151,.055);
+    padding:6px 12px;border-radius:999px;letter-spacing:.4px;margin-bottom:26px}
+  .tag .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);
+    box-shadow:0 0 10px var(--teal)}
+  h1{font-size:63px;line-height:1.06;letter-spacing:-1.8px;font-weight:720;
+     background:linear-gradient(180deg,#fff 12%,#c6cddd 96%);
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  .h1-sub{display:block;font-size:19px;font-weight:520;letter-spacing:0;color:var(--muted);
+    -webkit-text-fill-color:var(--muted);margin-top:14px}
+  .lead{margin-top:24px;font-size:16px;color:var(--muted);max-width:520px}
+  .lead b{color:var(--text);font-weight:620}
+  .cta{display:flex;gap:14px;margin-top:34px;align-items:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:9px;padding:12px 22px;border-radius:10px;
+    font-size:14.5px;font-weight:600;text-decoration:none;transition:transform .15s,box-shadow .2s}
+  .btn-primary{background:linear-gradient(135deg,var(--teal),#28c98b);color:#04120c;
+    box-shadow:0 8px 30px rgba(61,220,151,.28)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 36px rgba(61,220,151,.36)}
+  .btn-ghost{border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:rgba(255,255,255,.2)}
+  .stack{display:flex;gap:9px;margin-top:32px;flex-wrap:wrap}
+  .chip{font-size:11.5px;color:var(--muted);border:1px solid var(--line);
+    background:rgba(255,255,255,.024);padding:5px 11px;border-radius:7px;font-family:var(--mono)}
+
+  /* ── hero visual ── */
+  .viz{position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+    box-shadow:0 30px 90px rgba(0,0,0,.55)}
+  .viz-head{display:flex;align-items:center;justify-content:space-between;
+    padding:15px 18px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .viz-head .l{display:flex;gap:7px;align-items:center}
+  .viz-head i{width:9px;height:9px;border-radius:50%;background:#2a2f3d;display:block}
+  .viz-head i.on{background:var(--teal);box-shadow:0 0 9px var(--teal)}
+  .viz-body{padding:20px 18px 22px}
+  .viz-title{font-size:11.5px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;
+    margin-bottom:16px;display:flex;justify-content:space-between}
+  .mem-row{display:grid;grid-template-columns:74px 1fr 54px;gap:12px;align-items:center;
+    padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.055)}
+  .mem-row:last-child{border-bottom:0}
+  .mem-age{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+  .mem-bar{height:9px;border-radius:5px;background:rgba(255,255,255,.055);overflow:hidden;position:relative}
+  .mem-bar span{display:block;height:100%;border-radius:5px}
+  .mem-row:nth-child(2) span{width:88%;background:linear-gradient(90deg,var(--teal),#2ee6a2);
+    box-shadow:0 0 16px rgba(61,220,151,.4)}
+  .mem-row:nth-child(3) span{width:62%;background:linear-gradient(90deg,#3ddc97aa,#2ee6a277)}
+  .mem-row:nth-child(4) span{width:37%;background:linear-gradient(90deg,rgba(61,220,151,.45),rgba(61,220,151,.2))}
+  .mem-row:nth-child(5) span{width:16%;background:linear-gradient(90deg,rgba(139,124,255,.5),rgba(139,124,255,.18))}
+  .mem-row:nth-child(6) span{width:7%;background:rgba(255,255,255,.14)}
+  .mem-val{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:right}
+  .mem-row:nth-child(2) .mem-val{color:var(--teal)}
+  .viz-foot{display:flex;justify-content:space-between;padding:13px 18px;
+    border-top:1px solid var(--line);font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .frag-tag{color:var(--amber);font-size:10.5px}
+  .breath{animation:breath 4.5s ease-in-out infinite}
+  @keyframes breath{0%,100%{opacity:.55}50%{opacity:1}}
+
+  /* ── zone ── */
+  .zone{padding:64px 0 26px;border-top:1px solid rgba(255,255,255,.05)}
+  .kicker{font-size:12px;letter-spacing:2.4px;color:var(--teal);text-transform:uppercase;
+    font-family:var(--mono);margin-bottom:16px}
+  h2{font-size:34px;font-weight:680;letter-spacing:-.6px;line-height:1.25}
+  h2 em{font-style:normal;color:var(--teal)}
+  .zone-sub{color:var(--muted);font-size:15px;margin-top:12px;max-width:640px}
+
+  /* three problems */
+  .problems{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:38px}
+  .pcard{border:1px solid var(--line);border-radius:15px;padding:26px 24px;
+    background:linear-gradient(170deg,rgba(255,255,255,.035),rgba(255,255,255,.008))}
+  .pcard .no{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:1px}
+  .pcard h3{font-size:18px;margin:12px 0 10px;font-weight:640}
+  .pcard p{font-size:13.5px;color:var(--muted);line-height:1.7}
+  .pcard .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(61,220,151,.22);background:rgba(61,220,151,.07);color:var(--teal);
+    font-family:var(--mono);font-size:15px;margin-bottom:16px}
+
+  /* six vars */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center;padding:64px 0 26px;
+    border-top:1px solid rgba(255,255,255,.05);margin-top:38px}
+  .vars{display:flex;flex-direction:column;gap:15px;margin-top:8px}
+  .var{display:grid;grid-template-columns:104px 1fr 42px;gap:14px;align-items:center}
+  .var .k{font-size:13px;color:var(--muted)}
+  .var .k b{color:var(--text);font-weight:620}
+  .var .track{height:7px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+  .var .track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal2),var(--teal))}
+  .var:nth-child(3) .track i{background:linear-gradient(90deg,var(--violet),#a99eff)}
+  .var:nth-child(5) .track i{background:linear-gradient(90deg,#2e8cff,#5fb0ff)}
+  .var .v{font-family:var(--mono);font-size:11.5px;color:var(--dim);text-align:right}
+  .quote{border-left:2px solid rgba(61,220,151,.5);padding:2px 0 2px 18px;margin-top:26px;
+    color:var(--muted);font-size:14px;line-height:1.8}
+  .quote b{color:var(--teal);font-weight:600}
+
+  /* metrics */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
+  .m{border:1px solid var(--line);border-radius:14px;padding:24px 22px;
+    background:linear-gradient(175deg,rgba(255,255,255,.04),rgba(255,255,255,.008))}
+  .m .big{font-size:38px;font-weight:700;letter-spacing:-1.2px;
+    background:linear-gradient(180deg,#fff,#bfe9d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .m .big small{font-size:16px;font-weight:600;letter-spacing:0}
+  .m .cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .m .src{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:10px}
+
+  /* timeline gradient */
+  .grad{display:grid;grid-template-columns:150px repeat(7,1fr);gap:10px;margin-top:30px;
+    align-items:center;font-size:12px;color:var(--muted)}
+  .grad .h{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.4px}
+  .grad .col{text-align:center;font-family:var(--mono);font-size:11px}
+  .grad .cell{height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;border:1px solid rgba(255,255,255,.06)}
+
+  /* code */
+  .code{display:grid;grid-template-columns:1.02fr .98fr;gap:44px;align-items:center;
+    padding:64px 0 30px;border-top:1px solid rgba(255,255,255,.05);margin-top:38px}
+  pre{background:#05070b;border:1px solid var(--line);border-radius:14px;padding:22px 24px;
+    font-family:var(--mono);font-size:12.8px;line-height:1.85;color:#c8d0e0;overflow:auto}
+  pre .c{color:#5d6678}
+  pre .k{color:#8b7cff}
+  pre .s{color:#3ddc97}
+  pre .n{color:#ffb454}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);border:1px solid var(--line);
+    padding:5px 10px;border-radius:7px;background:rgba(255,255,255,.02)}
+  .tool.hi{color:var(--teal);border-color:rgba(61,220,151,.28);background:rgba(61,220,151,.06)}
+
+  /* footer */
+  footer{border-top:1px solid rgba(255,255,255,.06);margin-top:56px;padding:38px 0 46px}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+  .foot .l{font-size:13px;color:var(--dim)}
+  .foot .l b{color:var(--muted);font-weight:600}
+  .repo{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;
+    color:var(--teal);text-decoration:none;border:1px solid rgba(61,220,151,.25);
+    background:rgba(61,220,151,.055);padding:9px 15px;border-radius:9px}
+  .foot-right{display:flex;gap:18px;font-size:12.5px;color:var(--dim);font-family:var(--mono)}
+  .foot-right span{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav>
+  <div class="brand"><span class="logo"></span><span>GraphMemory</span></div>
+  <div class="nav-links">
+    <a href="#why">为什么</a>
+    <a href="#how">怎么想</a>
+    <a href="#data">实测</a>
+    <a href="#start">快速开始</a>
+  </div>
+  <a class="nav-cta" href="https://github.com/gh9ko8y/graphmemory">GitHub · MIT</a>
+</nav>
+
+<header class="hero wrap">
+  <div>
+    <div class="tag"><span class="dot breath"></span> OPEN SOURCE · MIT · v0.1.0</div>
+    <h1>GraphMemory
+      <span class="h1-sub">会忘、会老、会变的 AI 记忆库</span>
+    </h1>
+    <p class="lead">
+      别人的记忆库负责<b>「记住」</b>，它负责<b>「怎么忘」</b>。<br>
+      双时态 + 六变量衰减，让 AI 说「我记得好像是……」，<br>
+      而不是把三个月前的细节背得一字不差。
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/gh9ko8y/graphmemory">★ Star on GitHub</a>
+      <a class="btn btn-ghost" href="#start">快速开始 →</a>
+    </div>
+    <div class="stack">
+      <span class="chip">Python</span>
+      <span class="chip">FastAPI</span>
+      <span class="chip">Neo4j</span>
+      <span class="chip">PostgreSQL · pgvector</span>
+      <span class="chip">Redis</span>
+      <span class="chip">MCP</span>
+    </div>
+  </div>
+
+  <div class="viz">
+    <div class="viz-head">
+      <div class="l"><i class="on"></i><span>memory · session 0x4f2a</span></div>
+      <span>decay engine</span>
+    </div>
+    <div class="viz-body">
+      <div class="viz-title"><span>细节清晰度 D</span><span>age</span></div>
+      <div class="mem-row"><div class="mem-age">1 天</div><div class="mem-bar"><span></span></div><div class="mem-val">0.85</div></div>
+      <div class="mem-row"><div class="mem-age">7 天</div><div class="mem-bar"><span></span></div><div class="mem-val">0.48</div></div>
+      <div class="mem-row"><div class="mem-age">1 个月</div><div class="mem-bar"><span></span></div><div class="mem-val">0.04</div></div>
+      <div class="mem-row"><div class="mem-age">3 个月</div><div class="mem-bar"><span></span></div><div class="mem-val">0.00</div></div>
+      <div class="mem-row"><div class="mem-age">1 年+</div><div class="mem-bar"><span></span></div><div class="mem-val">片段</div></div>
+      <div class="viz-foot">
+        <span>fragments: 13</span>
+        <span class="frag-tag">「还记得有这么件事，细节模糊了」</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="zone wrap" id="why">
+  <div class="kicker">the problem</div>
+  <h2>记忆不是存储问题，<em>是时间问题</em></h2>
+  <p class="zone-sub">把聊天记录塞进向量库，只解决了「找得到」。三个更本质的问题没解决：</p>
+  <div class="problems">
+    <div class="pcard">
+      <div class="ic">01</div>
+      <h3>时间</h3>
+      <p>三个月前的「喜欢下雨天」和昨天的「喜欢晴天」，向量权重一样。<b>人不会这样。</b></p>
+    </div>
+    <div class="pcard">
+      <div class="ic">02</div>
+      <h3>遗忘</h3>
+      <p>所有记忆永久等权，噪音越积越多，检索越来越糊。<b>遗忘是特性，不是缺陷。</b></p>
+    </div>
+    <div class="pcard">
+      <div class="ic">03</div>
+      <h3>变化</h3>
+      <p>「他今年 26 岁」明年就错了；约定好的事过期了也不会被清理。<b>记忆需要时效。</b></p>
+    </div>
+  </div>
+</section>
+
+<section class="split wrap" id="how">
+  <div>
+    <div class="kicker">how it thinks</div>
+    <h2>六变量：<em>遗忘是降级，不是删除</em></h2>
+    <p class="zone-sub" style="margin-top:14px">每条记忆有六个维度。时间流逝时 D 缓慢下降、R 缓慢上升——直到淡出成一段「照片式片段」。原文账本永远保留，可追溯当时到底说了什么。</p>
+    <div class="quote">
+      <b>双时态</b>：每条事实有两条时间轴——「有效时间」和「记录时间」，能回答「当时是什么」与「后来改了什么」。
+    </div>
+  </div>
+  <div class="vars">
+    <div class="var"><div class="k"><b>S</b> 意义</div><div class="track"><i style="width:82%"></i></div><div class="v">0.82</div></div>
+    <div class="var"><div class="k"><b>D</b> 细节</div><div class="track"><i style="width:61%"></i></div><div class="v">0.61</div></div>
+    <div class="var"><div class="k"><b>R</b> 检索难度</div><div class="track"><i style="width:34%"></i></div><div class="v">0.34</div></div>
+    <div class="var"><div class="k"><b>E</b> 情绪</div><div class="track"><i style="width:27%"></i></div><div class="v">0.27</div></div>
+    <div class="var"><div class="k"><b>C</b> 巩固</div><div class="track"><i style="width:45%"></i></div><div class="v">0.45</div></div>
+    <div class="var"><div class="k"><b>I</b> 干扰</div><div class="track"><i style="width:18%"></i></div><div class="v">0.18</div></div>
+  </div>
+</section>
+
+<section class="zone wrap">
+  <div class="kicker">time gradient</div>
+  <h2>不同的年龄，<em>清晰度的天花板不同</em></h2>
+  <p class="zone-sub">越旧的记忆，细节上限越低，检索门槛越高，说话口径也越不确定。</p>
+  <div class="grad">
+    <div class="h">age ╲ Δ</div>
+    <div class="col">1天</div><div class="col">7天</div><div class="col">2周</div>
+    <div class="col">1月</div><div class="col">3月</div><div class="col">半年</div><div class="col">1年+</div>
+
+    <div class="h">细节 D</div>
+    <div class="cell" style="background:rgba(61,220,151,.32);border-color:rgba(61,220,151,.45)">0.85</div>
+    <div class="cell" style="background:rgba(61,220,151,.22)">0.48</div>
+    <div class="cell" style="background:rgba(61,220,151,.15)">0.20</div>
+    <div class="cell" style="background:rgba(61,220,151,.09)">0.04</div>
+    <div class="cell" style="background:rgba(255,255,255,.04)">0.00</div>
+    <div class="cell" style="background:rgba(255,255,255,.03)">0.00</div>
+    <div class="cell" style="background:rgba(255,255,255,.02)">片段</div>
+
+    <div class="h">检索 R</div>
+    <div class="cell" style="background:rgba(139,124,255,.10)">0.31</div>
+    <div class="cell" style="background:rgba(139,124,255,.14)">0.40</div>
+    <div class="cell" style="background:rgba(139,124,255,.18)">0.54</div>
+    <div class="cell" style="background:rgba(139,124,255,.24)">0.80</div>
+    <div class="cell" style="background:rgba(139,124,255,.30)">1.00</div>
+    <div class="cell" style="background:rgba(139,124,255,.30)">1.00</div>
+    <div class="cell" style="background:rgba(139,124,255,.34)">1.00</div>
+
+    <div class="h">口径</div>
+    <div class="cell" style="background:rgba(61,220,151,.10)">确定</div>
+    <div class="cell" style="background:rgba(255,180,84,.07);color:#d9c08a">记得</div>
+    <div class="cell" style="background:rgba(255,180,84,.09);color:#d9c08a">大概</div>
+    <div class="cell" style="background:rgba(255,180,84,.10);color:#d9c08a">好像</div>
+    <div class="cell" style="background:rgba(255,180,84,.11);color:#c9b184">模糊</div>
+    <div class="cell" style="background:rgba(255,180,84,.12);color:#c9b184">不确定</div>
+    <div class="cell" style="background:rgba(255,180,84,.13);color:#c9b184">可能</div>
+  </div>
+</section>
+
+<section class="zone wrap" id="data">
+  <div class="kicker">measured, not claimed</div>
+  <h2>实测数据</h2>
+  <div class="metrics">
+    <div class="m">
+      <div class="big">+53<small>%</small></div>
+      <div class="cap">结构化事实的 Top-1 召回提升<br>（0.55–0.63 → 0.84–0.86）</div>
+      <div class="src">fact granularity · R@1</div>
+    </div>
+    <div class="m">
+      <div class="big">0.79</div>
+      <div class="cap">竞争检索 R@1（4,992 条合成数据）<br>向量基线 0.718</div>
+      <div class="src">competitive recall</div>
+    </div>
+    <div class="m">
+      <div class="big">−86<small>%</small></div>
+      <div class="cap">真实群聊机器人单轮缓存读<br>100 万 → 13 万 token</div>
+      <div class="src">4 months · production</div>
+    </div>
+    <div class="m">
+      <div class="big">6<small> vars</small></div>
+      <div class="cap">S / D / R / E / C / I<br>遗忘模型 + 时间梯度</div>
+      <div class="src">decay engine</div>
+    </div>
+  </div>
+</section>
+
+<section class="code wrap" id="start">
+  <div>
+    <div class="kicker">quick start</div>
+    <h2>4 条命令，<em>接上你的 AI</em></h2>
+    <p class="zone-sub" style="margin-top:14px">自带 MCP server，任何支持 MCP 的代理直接接。写入自动分类、定时效、抽结构。</p>
+    <div class="tools">
+      <span class="tool hi">add_memory</span><span class="tool hi">search_memory</span>
+      <span class="tool">memory_stats</span><span class="tool">get_timeline</span>
+      <span class="tool">list_facts</span><span class="tool">list_episodes</span>
+      <span class="tool">memory_dedupe</span><span class="tool">memory_forget</span>
+      <span class="tool">chat</span>
+    </div>
+  </div>
+  <div>
+    <pre><span class="c"># 1. 起数据库</span>
+git clone https://github.com/gh9ko8y/graphmemory
+cd graphmemory && cp .env.example .env
+<span class="n">docker compose up -d</span>
+
+<span class="c"># 2. 装依赖 + 初始化 schema</span>
+pip install -e .
+psql ... -f scripts/init_db.sql
+
+<span class="c"># 3. 启动服务（管理台 /ui）</span>
+<span class="k">uvicorn</span> graphmemory.main:app --port <span class="n">8000</span>
+
+<span class="c"># 4. MCP 接你的代理</span>
+<span class="k">"command"</span>: <span class="s">"python"</span>,
+<span class="k">"args"</span>: [<span class="s">"mcp_server.py"</span>]</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div class="l"><b>GraphMemory</b> · 双时态 AI 记忆系统 · MIT</div>
+    <a class="repo" href="https://github.com/gh9ko8y/graphmemory">⭐ github.com/gh9ko8y/graphmemory</a>
+    <div class="foot-right">
+      <span>Python</span><span>Neo4j</span><span>Postgres</span><span>Redis</span><span>MCP</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -11,6 +11,12 @@ competitive retrieval layer on top of [Graphiti](https://github.com/getzep/graph
 
 ---
 
+## 演示视频
+
+[![GraphMemory 讲解视频](docs/demo-cover.png)](docs/demo.mp4)
+
+> 67 秒 · 小鱼配音 · 中文字幕 · [直接下载](docs/demo.mp4)
+
 ## 特性
 
 | 能力 | 说明 |
@@ -197,3 +203,7 @@ docs/                    # 设计文档
 ## License
 
 MIT — 见 [LICENSE](LICENSE)。
+
+---
+
+> **最后，我们誓死践行开源精神。**
