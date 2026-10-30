@@ -566,7 +566,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     except httpx.ConnectError:
         text = (
             "❌ 无法连接 GraphMemory API（http://127.0.0.1:8000）。\n"
-            "请确认服务已启动：双击桌面悬浮球（绿色=运行中），"
+            "请确认 GraphMemory 服务已启动（README 的快速开始），"
             "或运行 start.ps1"
         )
     except httpx.HTTPStatusError as e:
